@@ -257,7 +257,9 @@ SING_DBL  equ     7420h ;"1-Single side / 2-Double side"
 ;    bit 0: 0 for drive-based, 1 for device-based
 ;    bit 1: 1 for hot-plug devices supported (device-based drivers only)
 
-	db 1+(2*DRV_HOTPLUG)
+	;db 1+(2*DRV_HOTPLUG)
+
+    db 7
 
 ;Reserved byte
 	db	0
@@ -281,9 +283,10 @@ DRV_NAME:
         jp      DRV_DIRECT2
         jp      DRV_DIRECT3
         jp      DRV_DIRECT4
+        jp  DRV_CONFIG
 
 
-	ds	15
+	ds	12
 
 	jp	DEV_RW
 	jp	DEV_INFO
@@ -869,6 +872,51 @@ DRV_DIRECT2:
 DRV_DIRECT3:
 DRV_DIRECT4:
 	ret
+
+
+
+;-----------------------------------------------------------------------------
+;
+; Get driver configuration
+;
+; Input: ;   A = Configuration index ;   BC, DE, HL = Depends on the configuration
+;
+; Output: ;   A = 0: Ok ;       1: Configuration not available for the supplied index
+;   BC, DE, HL = Depends on the configuration
+;
+; * Get number of drives at boot time (for device-based drivers only):
+;   Input: ;     A = 1 ;     B = 0 for DOS 2 mode, 1 for DOS 1 mode
+;   Output: ;     B = number of drives
+;
+; * Get default configuration for drive
+;   Input: ;     A = 2 ;     B = 0 for DOS 2 mode, 1 for DOS 1 mode ;     C = Relative drive number at boot time
+;   Output: ;     B = Device index ;     C = LUN index
+
+
+DRV_CONFIG:
+    dec a
+    jr  z,.GetNumDrives
+    dec a
+    jr  z,.GetRelDrvNum
+.error:
+    ld  a,1         ; Unknown configuration index
+    ret
+
+.GetNumDrives:
+    bit 5,c         ;Single drive per driver requested?
+    ld b,1
+    ;ld a,0 ; A already zero here
+    ret nz
+
+    ld  b,8   ; num of partitions on my SD hardcoded
+    ;xor a ; A already zero here
+    ret
+
+.GetRelDrvNum:
+    ld b, 1
+    ld  c,b
+    ;xor a ; A already zero here
+    ret
 
 
 ;=====
